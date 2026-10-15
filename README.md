@@ -8,8 +8,31 @@ the script defines each task's `perform` function with `def`, builds the project
 `version` and `workflows`, then calls each task's `perform(context)` when the workflow runs. Keep the definition a
 plain dict and keep it last: anything after it, or a `main()` wrapper, hides the dict from the server.
 
-The project, "Sample Code Project Python", has one workflow, `sampleWorkflow1`. It takes a `name` input, runs one
-task, `greet`, that logs and returns `Hello, <name>!`, and exposes that as the `greeting` output.
+The project, "Sample Code Project Python", has three workflows:
+
+- `sampleWorkflow1` takes a `name` input, runs one task, `greet`, that logs and returns `Hello, <name>!`, and exposes
+  that as the `greeting` output.
+- `summarizeNewEmail` starts with the Gmail **New Email** polling trigger (`googleMail/v1/newEmailPolling`). It runs
+  once for every new email and returns a one-line summary as the `summary` output.
+- `fetchRecentEmails` takes an optional `from` input, calls the Gmail **Search Email** action and returns the matching
+  messages as the `emails` output.
+
+### Connections
+
+A task names the connections it uses and calls a component action through one of them:
+
+```python
+def fetch_emails(context: "TaskContext") -> Any:
+    return context.component.googleMail.searchEmail({"maxResults": 10}, "gmail")
+
+# in the task definition:
+"connections": [{"componentName": "googleMail", "name": "gmail"}],
+"perform": fetch_emails,
+```
+
+The declared connection, and the Gmail trigger, show up in the workflow's test configuration and in the project
+deployment like any other workflow connection: pick a Gmail connection for `gmail` there. Nothing in the source names a
+specific account.
 
 Inside `perform`, `context.input()` returns the workflow inputs plus the output of every task that already ran (under
 the task's name), `context.input("name")` returns one of them, and `context.log(level, message)` writes to the
@@ -31,8 +54,9 @@ python3 scripts/check.py src/sample_code_project.py name=Ada
 ```
 
 Evaluates the file the same way the server does (runs every statement but the last, then evaluates the last
-expression), checks its shape and runs each task once with a stub context. It needs only Python 3.9 or later; there
-are no dependencies to install.
+expression), checks its shape and runs each task once with a stub context. The stub stands in for Gmail: every trigger
+output and every component action call returns a fixed sample email, and a request trigger an empty body. It needs
+only Python 3.9 or later; there are no dependencies to install.
 
 To type check the file as well:
 
