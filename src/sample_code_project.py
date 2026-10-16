@@ -32,6 +32,18 @@ def fetch_emails(context: "TaskContext") -> List[Any]:
     return messages
 
 
+def post_to_slack(context: "TaskContext") -> Any:
+    email = context.input("newEmail")
+
+    text = f"New email from {email['from']}: {email['subject']}"
+
+    message = context.component.slack.sendChannelMessage({"channel": context.input("channel"), "text": text}, "slack")
+
+    context.log("info", f"Posted to Slack: {text}")
+
+    return message
+
+
 project: "ProjectDefinition" = {
     "name": "Sample Code Project Python",
     "version": "1",
@@ -84,6 +96,28 @@ project: "ProjectDefinition" = {
                     # or when deploying the project.
                     "connections": [{"componentName": "googleMail", "name": "gmail"}],
                     "perform": fetch_emails,
+                }
+            ],
+        },
+        {
+            "name": "notifySlackOnNewEmail",
+            "label": "Notify Slack on New Email",
+            "description": "Posts every new email in the inbox to a Slack channel.",
+            "inputs": [{"name": "channel", "label": "Slack Channel ID", "type": "STRING", "required": True}],
+            "triggers": [
+                {"name": "newEmail", "type": "googleMail/v1/newEmailPolling", "parameters": {"format": "SIMPLE"}}
+            ],
+            "outputs": [{"name": "message", "task": "postToSlack"}],
+            "tasks": [
+                {
+                    "name": "postToSlack",
+                    "label": "Post to Slack",
+                    "description": "Posts the sender and subject with the Slack Send Channel Message action.",
+                    # The Gmail trigger needs no declaration, but the task calls Slack itself, so it declares
+                    # that connection and passes the name. Pick the Slack connection for "slack" in the test
+                    # configuration or when deploying the project.
+                    "connections": [{"componentName": "slack", "name": "slack"}],
+                    "perform": post_to_slack,
                 }
             ],
         },
