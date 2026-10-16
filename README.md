@@ -16,10 +16,11 @@ The project, "Sample Code Project Python", has four workflows:
   once for every new email and returns a one-line summary as the `summary` output.
 - `fetchRecentEmails` takes an optional `from` input, calls the Gmail **Search Email** action and returns the matching
   messages as the `emails` output.
-- `notifySlackOnNewEmail` starts with the Gmail **New Email** trigger and takes a required `channel` input, the ID of a
-  Slack channel. Its `postToSlack` task calls the Slack **Send Channel Message** action, so it declares a `slack`
-  connection and passes its name: pick a Slack connection for it in the test configuration or when deploying the
-  project.
+- `notifySlackOnNewEmail` starts with the Gmail **New Email** trigger and takes a required `channel` input; its options
+  come from Slack's own `channel` input (`componentName`, `componentVersion` and `groupName` on the input), so it is
+  picked from the Slack workspace's channels. Its `postToSlack` task calls the Slack **Send Channel Message** action, so
+  it declares a `slack` connection and passes its name: pick a Slack connection for it in the test configuration or when
+  deploying the project.
 
 ### Connections
 
