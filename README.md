@@ -2,11 +2,11 @@
 
 A sample ByteChef **automation code project** written in Python. The whole project is one file,
 [`src/sample_code_project.py`](src/sample_code_project.py), and that file is what you deploy - there is no build step.
-The file is a single Python script. The server runs it with GraalPy and reads the value of its **last expression**:
-the script defines each task's `perform` function with `def`, builds the project as a plain `dict` assigned to
-`project`, and ends with `project` alone on the last line. The server reads the dict's `name`, `description`,
-`version` and `workflows`, then calls each task's `perform(context)` when the workflow runs. Keep the definition a
-plain dict and keep it last: anything after it, or a `main()` wrapper, hides the dict from the server.
+The file is a single Python script. The server runs it with GraalPy and reads the value of its **last expression**: the
+script defines each task's `perform` function with `def`, builds the project as a plain `dict` assigned to `project`,
+and ends with `project` alone on the last line. The server reads the dict's `name`, `description`, `version` and
+`workflows`, then calls each task's `perform(input, context)` when the workflow runs. Keep the definition a plain dict
+and keep it last: anything after it, or a `main()` wrapper, hides the dict from the server.
 
 The project, "Sample Code Project Python", has four workflows:
 
@@ -27,7 +27,7 @@ The project, "Sample Code Project Python", has four workflows:
 A task names the connections it uses and calls a component action through one of them:
 
 ```python
-def fetch_emails(context: "TaskContext") -> Any:
+def fetch_emails(input: Dict[str, Any], context: "TaskContext") -> Any:
     return context.component.googleMail.searchEmail({"maxResults": 10}, "gmail")
 
 # in the task definition:
@@ -39,18 +39,20 @@ The declared connection, and the Gmail trigger, show up in the workflow's test c
 deployment like any other workflow connection: pick a Gmail connection for `gmail` there. Nothing in the source names a
 specific account.
 
-Inside `perform`, `context.input()` returns the workflow inputs plus the output of every task that already ran (under
-the task's name), `context.input("name")` returns one of them, and `context.log(level, message)` writes to the
-execution log.
+A task's `perform` takes `(input, context)`. `input` is a dict of the workflow inputs plus the output of every task that
+already ran (under the task's name), so `input.get("name")` returns one of them, and `context.log(level, message)`
+writes to the execution log. A task that reads its connections' parameters, to build a request itself, declares a third
+parameter and takes `perform(input, connection, context)` instead: `connection` maps each declared connection's name to
+that connection's parameters, credentials included.
 
 ## Types
 
-The keys are the same camelCase keys as in a JavaScript code project. To have a type checker catch a missing `name`
-or a misspelled `perform`, the file is annotated with the types from the
-[`bytechef-workflow-api`](https://pypi.org/project/bytechef-workflow-api/) package: `project: "ProjectDefinition"`
-and `def greet(context: "TaskContext") -> str`. The ByteChef runtime can't import that package, so the file imports
-it only under `typing.TYPE_CHECKING` and quotes the annotations; at run time the import is skipped. Standard-library
-imports are fine; nothing else is available on the server.
+The keys are the same camelCase keys as in a JavaScript code project. To have a type checker catch a missing `name` or a
+misspelled `perform`, the file is annotated with the types from the
+[`bytechef-workflow-api`](https://pypi.org/project/bytechef-workflow-api/) package: `project: "ProjectDefinition"` and
+`def greet(input: Dict[str, Any], context: "TaskContext") -> str`. The ByteChef runtime can't import that package, so
+the file imports it only under `typing.TYPE_CHECKING` and quotes the annotations; at run time the import is skipped.
+Standard-library imports are fine; nothing else is available on the server.
 
 ## Check
 

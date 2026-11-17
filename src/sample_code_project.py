@@ -1,19 +1,19 @@
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
     from bytechef_workflow_api import ProjectDefinition, TaskContext
 
 
-def greet(context: "TaskContext") -> str:
-    name = context.input("name")
+def greet(input: Dict[str, Any], context: "TaskContext") -> str:
+    name = input.get("name")
 
     context.log("info", f"Greeting {name}")
 
     return f"Hello, {name}!"
 
 
-def summarize(context: "TaskContext") -> str:
-    email = context.input("newEmail")
+def summarize(input: Dict[str, Any], context: "TaskContext") -> str:
+    email = input["newEmail"]
 
     summary = f"New email from {email['from']}: {email['subject']}"
 
@@ -22,8 +22,8 @@ def summarize(context: "TaskContext") -> str:
     return summary
 
 
-def fetch_emails(context: "TaskContext") -> List[Any]:
-    result = context.component.googleMail.searchEmail({"from": context.input().get("from"), "maxResults": 10}, "gmail")
+def fetch_emails(input: Dict[str, Any], context: "TaskContext") -> List[Any]:
+    result = context.component.googleMail.searchEmail({"from": input.get("from"), "maxResults": 10}, "gmail")
 
     messages: List[Any] = result.get("messages") or []
 
@@ -32,12 +32,12 @@ def fetch_emails(context: "TaskContext") -> List[Any]:
     return messages
 
 
-def post_to_slack(context: "TaskContext") -> Any:
-    email = context.input("newEmail")
+def post_to_slack(input: Dict[str, Any], context: "TaskContext") -> Any:
+    email = input["newEmail"]
 
     text = f"New email from {email['from']}: {email['subject']}"
 
-    message = context.component.slack.sendChannelMessage({"channel": context.input("channel"), "text": text}, "slack")
+    message = context.component.slack.sendChannelMessage({"channel": input.get("channel"), "text": text}, "slack")
 
     context.log("info", f"Posted to Slack: {text}")
 
