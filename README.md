@@ -8,7 +8,7 @@ and ends with `project` alone on the last line. The server reads the dict's `nam
 `workflows`, then calls each task's `perform(input, context)` when the workflow runs. Keep the definition a plain dict
 and keep it last: anything after it, or a `main()` wrapper, hides the dict from the server.
 
-The project, "Sample Code Project Python", has four workflows:
+The project, "Sample Code Project Python", has five workflows:
 
 - `sampleWorkflow1` takes a `name` input, runs one task, `greet`, that logs and returns `Hello, <name>!`, and exposes
   that as the `greeting` output.
@@ -21,6 +21,34 @@ The project, "Sample Code Project Python", has four workflows:
   picked from the Slack workspace's channels. Its `postToSlack` task calls the Slack **Send Channel Message** action, so
   it declares a `slack` connection and passes its name: pick a Slack connection for it in the test configuration or when
   deploying the project.
+- `listOrders` starts with the API Platform **New API Request** trigger (`apiPlatform/v1/newApiRequest`), so it can back
+  an API Platform endpoint. Its `fetchOrders` task returns a list of orders, and its `respond` task is a component task
+  that runs the API Platform **Response to API Request** action with the `fetchOrders` output as the response body.
+
+### Component tasks
+
+A task that only runs a component action, with no logic of its own, can name the action by type instead of declaring
+a `perform` function, the same way a trigger names its component:
+
+```python
+{
+    "name": "respond",
+    "type": "apiPlatform/v1/responseToAPIRequest",
+    "parameters": {"responseType": "SUCCESS", "response": {"success": "${fetchOrders}"}},
+}
+```
+
+The type is `<component>/v<version>/<action>`, and `parameters` holds the action's inputs. A `${...}` expression is
+evaluated when the task runs: `"${fetchOrders}"` is the whole output of the `fetchOrders` task, `"${fetchOrders.count}"`
+one of its fields and `"${fetchOrders.orders[0].id}"` an element of a list, and text such as
+`"Found ${fetchOrders.count} orders"` becomes a string with the value filled in. Python's own f-strings use `{...}`
+without the `$`, so a `${...}` in a plain string literal is left for the platform. A component task declares no
+`connections`: when its action needs one, the workflow's test configuration and the project deployment ask for it like
+for the same task in a visual workflow. Deploying fails when the component, its version or the action does not exist on
+the server.
+
+To serve `listOrders`, create an API collection for the deployed project under Automation → **API Platform**, add an
+endpoint that runs `listOrders`, and enable both; a request to the endpoint answers with the orders.
 
 ### Connections
 
@@ -62,7 +90,8 @@ python3 scripts/check.py src/sample_code_project.py name=Ada
 
 Evaluates the file the same way the server does (runs every statement but the last, then evaluates the last
 expression), checks its shape and runs each task once with a stub context. The stub stands in for Gmail: every trigger
-output and every component action call returns a fixed sample email, and a request trigger an empty body. It needs
+output and every component action call returns a fixed sample email, and a request trigger an empty body. A component
+task prints its action type and its parameters with the `${...}` expressions filled in. It needs
 only Python 3.9 or later; there are no dependencies to install.
 
 To type check the file as well:

@@ -44,6 +44,14 @@ def post_to_slack(input: Dict[str, Any], context: "TaskContext") -> Any:
     return message
 
 
+def fetch_orders(input: Dict[str, Any], context: "TaskContext") -> Dict[str, Any]:
+    orders = [{"id": 1, "total": 42}, {"id": 2, "total": 17}]
+
+    context.log("info", f"Returning {len(orders)} orders")
+
+    return {"orders": orders, "count": len(orders)}
+
+
 project: "ProjectDefinition" = {
     "name": "Sample Code Project Python",
     "version": "1",
@@ -122,6 +130,22 @@ project: "ProjectDefinition" = {
                     "connections": [{"componentName": "slack", "name": "slack"}],
                     "perform": post_to_slack,
                 }
+            ],
+        },
+        {
+            "name": "listOrders",
+            "label": "List Orders",
+            "description": "Serves an API Platform endpoint that answers with the orders fetchOrders returns.",
+            "triggers": [{"name": "request", "type": "apiPlatform/v1/newApiRequest", "parameters": {"request": {}}}],
+            "tasks": [
+                {"name": "fetchOrders", "label": "Fetch Orders", "perform": fetch_orders},
+                {
+                    "name": "respond",
+                    "label": "Respond",
+                    "description": "Answers the API caller with the fetchOrders output.",
+                    "type": "apiPlatform/v1/responseToAPIRequest",
+                    "parameters": {"responseType": "SUCCESS", "response": {"success": "${fetchOrders}"}},
+                },
             ],
         },
     ],
